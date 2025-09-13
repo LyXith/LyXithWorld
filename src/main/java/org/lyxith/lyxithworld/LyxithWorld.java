@@ -6,10 +6,15 @@ import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
 import org.lyxith.lyxithconfig.api.LyXithConfigAPI;
 import org.lyxith.lyxithconfig.api.LyXithConfigNodeImpl;
 import org.slf4j.Logger;
@@ -28,7 +33,7 @@ public class LyxithWorld implements ModInitializer {
     public static LyXithConfigAPI configAPI;
     public static MinecraftServer server;
     public static final Logger LOGGER = LogUtils.getLogger();
-    private final HashMap<Identifier, RuntimeWorldHandle> worlds = new HashMap<>();
+    public static final HashMap<Identifier, RuntimeWorldHandle> worlds = new HashMap<>();
 
     @Override
     public void onInitialize() {
@@ -66,5 +71,11 @@ public class LyxithWorld implements ModInitializer {
     }
     public static LyXithConfigAPI getConfigAPI() {
         return  configAPI;
+    }
+    public static boolean isWorldExist(Identifier key) {
+        RegistryKey<World> worldKey = RegistryKey.of(RegistryKeys.WORLD, key);
+
+        ServerWorld world = server.getWorld(worldKey);
+        return world != null;
     }
 }
