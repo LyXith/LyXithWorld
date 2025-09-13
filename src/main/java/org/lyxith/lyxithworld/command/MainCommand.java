@@ -18,14 +18,16 @@ public class MainCommand {
                 context.getSource().sendFeedback(()->Text.literal(String.valueOf(configNode.getNode("helpInfo").get().getString())), false);
                 return 1;
             }).build();
-     public static LiteralCommandNode<ServerCommandSource> createWorld = CommandManager.literal("create")
-             .then(CommandManager.argument("DimensionType", StringArgumentType.string()))
-             .then(CommandManager.argument("Generator", StringArgumentType.string()))
-             .then(CommandManager.argument("ShouldTickTime", BoolArgumentType.bool()))
-             .executes(context -> {
-                 String DimensionType = StringArgumentType.getString(context,"DimensionType");
-                 String Generator = StringArgumentType.getString(context,"Generator");
-                 boolean ShouldTickTime = BoolArgumentType.getBool(context,"ShouldTickTime");
-                 return 1;
-             }).build();
+    public static LiteralCommandNode<ServerCommandSource> createWorld = CommandManager.literal("create")
+            .then(CommandManager.argument("DimensionType", StringArgumentType.string())
+                    .then(CommandManager.argument("Generator", StringArgumentType.string())
+                            .then(CommandManager.argument("ShouldTickTime", BoolArgumentType.bool())
+                                    .executes(context -> {
+                                        String dimensionType = StringArgumentType.getString(context, "DimensionType");
+                                        String generator = StringArgumentType.getString(context, "Generator");
+                                        boolean shouldTickTime = BoolArgumentType.getBool(context, "ShouldTickTime");
+                                        context.getSource().sendFeedback(() -> Text.literal(dimensionType + generator + shouldTickTime), false);
+                                        return 1;
+                                    }))))
+            .build();
 }
