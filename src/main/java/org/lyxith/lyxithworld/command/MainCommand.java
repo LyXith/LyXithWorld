@@ -15,7 +15,7 @@ public class MainCommand {
      public static LiteralCommandNode<ServerCommandSource> mainCommand = CommandManager.literal("lyxithworld")
             .executes(context -> {
                 configAPI.loadConfig(modId,configName);
-                context.getSource().sendFeedback(()->Text.literal(String.valueOf(configNode.getNode("helpInfo").get().getString())), false);
+                context.getSource().sendFeedback(()->Text.literal(configNode.getNode("helpInfo").get().getString().get()), false);
                 return 1;
             }).build();
     public static LiteralCommandNode<ServerCommandSource> createWorld = CommandManager.literal("create")
