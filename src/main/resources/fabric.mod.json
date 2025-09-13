@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "lyxithworld",
+  "version": "${version}",
+  "name": "LyXithWorld",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/lyxithworld/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "org.lyxith.lyxithworld.LyxithWorld"
+    ]
+  },
+  "mixins": [
+    "lyxithworld.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}",
+    "fantasy": ">=0.6.7+1.21.8"
+  }
+}
