@@ -31,6 +31,7 @@ dependencies {
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     modImplementation "xyz.nucleoid:fantasy:${project.fantasy_version}"
+    modImplementation "org.lyxith:lyxithconfig:${project.lyxithconfig_version}"
 }
 
 processResources {

@@ -21,6 +21,7 @@
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
     "minecraft": "${minecraft_version}",
-    "fantasy": ">=0.6.7+1.21.8"
+    "fantasy": ">=0.6.7+1.21.8",
+    "LyXithConfig": ">=1.0"
   }
 }
