@@ -10,6 +10,7 @@ import net.minecraft.world.dimension.DimensionTypes;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.FlatChunkGenerator;
 import net.minecraft.world.gen.chunk.FlatChunkGeneratorConfig;
+import org.lyxith.lyxithconfig.api.LyXithConfigNode;
 import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
 import xyz.nucleoid.fantasy.RuntimeWorldHandle;
@@ -19,12 +20,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static net.minecraft.world.GameRules.*;
-import static org.lyxith.lyxithworld.LyxithWorld.LOGGER;
-import static org.lyxith.lyxithworld.LyxithWorld.server;
+import static org.lyxith.lyxithworld.LyxithWorld.*;
 
-public class CreateWorld {
-    private final RuntimeWorldHandle worldHandle;
-    public CreateWorld(String dimensionType, String generatorType, boolean shouldTickTime, String ownerName) {
+public class WorldManager {
+    private static RuntimeWorldHandle worldHandle;
+
+    public static void createWorld(String dimensionType, String generatorType, boolean shouldTickTime, String ownerName) {
         try {
             LOGGER.info("=== 开始创建世界 ===");
 
@@ -44,7 +45,7 @@ public class CreateWorld {
             Fantasy fantasy = Fantasy.get(server);
             LOGGER.info("创建持久化世界: {}", worldId);
 
-            this.worldHandle = fantasy.getOrOpenPersistentWorld(worldId, config);
+            worldHandle = fantasy.getOrOpenPersistentWorld(worldId, config);
 
             LOGGER.info("世界创建成功: {}", worldId);
 
@@ -54,7 +55,7 @@ public class CreateWorld {
         }
     }
 
-    private RuntimeWorldConfig createWorldConfig(String dimensionType, String generatorType, boolean shouldTickTime) {
+    private static RuntimeWorldConfig createWorldConfig(String dimensionType, String generatorType, boolean shouldTickTime) {
         RegistryKey<DimensionType> dimensionKey = parseDimensionType(dimensionType);
         ChunkGenerator chunkGenerator = createChunkGenerator(server, generatorType);
 
@@ -71,7 +72,7 @@ public class CreateWorld {
     public RuntimeWorldHandle getWorldHandle() {
         return worldHandle;
     }
-    private RegistryKey<DimensionType> parseDimensionType(String dimensionType) {
+    private static RegistryKey<DimensionType> parseDimensionType(String dimensionType) {
         return switch (dimensionType.toLowerCase()) {
             case "overworld" -> DimensionTypes.OVERWORLD;
             case "nether" -> DimensionTypes.THE_NETHER;
@@ -82,7 +83,7 @@ public class CreateWorld {
             }
         };
     }
-    private ChunkGenerator createChunkGenerator(MinecraftServer server, String generatorType) {
+    private static ChunkGenerator createChunkGenerator(MinecraftServer server, String generatorType) {
         var biomeRegistry = server.getRegistryManager().getOrThrow(RegistryKeys.BIOME);
         var plainsBiome = biomeRegistry.getOrThrow(BiomeKeys.PLAINS);
 
@@ -101,5 +102,15 @@ public class CreateWorld {
                 yield server.getOverworld().getChunkManager().getChunkGenerator();
             }
         };
+    }
+    public static void loadWorld(String owner) {
+        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+owner).get();
+        String dimensionType = worldNode.getList().get().get(0).toString();
+        String generatorType = worldNode.getList().get().get(1).toString();
+        boolean shouldTickTime = Boolean.parseBoolean(worldNode.getList().get().get(2).toString());
+        Identifier worldId = Identifier.of("lyxithworld", owner.toLowerCase());
+        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
+        Fantasy fantasy = Fantasy.get(server);
+        fantasy.getOrOpenPersistentWorld(worldId, config);
     }
 }

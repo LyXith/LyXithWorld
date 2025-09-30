@@ -6,7 +6,6 @@ import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -18,22 +17,21 @@ import net.minecraft.world.World;
 import org.lyxith.lyxithconfig.api.LyXithConfigAPI;
 import org.lyxith.lyxithconfig.api.LyXithConfigNodeImpl;
 import org.slf4j.Logger;
-import xyz.nucleoid.fantasy.RuntimeWorldHandle;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.lyxith.lyxithworld.command.MainCommand.*;
 
 public class LyxithWorld implements ModInitializer {
     private static final String defaultHelpInfo = "test help information";
-    public static final LyXithConfigNodeImpl configNode = new LyXithConfigNodeImpl();
+    public static LyXithConfigNodeImpl configNode = new LyXithConfigNodeImpl();
     public static final String modId = "LyXithWorld";
+    public static final String nameSpace = "lyxithworld";
     public static final String configName = "World";
     public static LyXithConfigAPI configAPI;
     public static MinecraftServer server;
     public static final Logger LOGGER = LogUtils.getLogger();
-    public static final HashMap<Identifier, RuntimeWorldHandle> worlds = new HashMap<>();
 
     @Override
     public void onInitialize() {
@@ -48,6 +46,7 @@ public class LyxithWorld implements ModInitializer {
         initConfig();
         ServerLifecycleEvents.SERVER_STARTED.register((s) -> {
             server = s;
+            loadAllWorlds();
         });
 
         CommandRegistrationCallback.EVENT.register((dispatcher,registryAccess,environment) -> {
@@ -56,6 +55,7 @@ public class LyxithWorld implements ModInitializer {
     }
     private void commandRegister(CommandDispatcher<ServerCommandSource> dispatcher, LiteralCommandNode<ServerCommandSource> command) {
         command.addChild(createWorld);
+        command.addChild(load);
         dispatcher.getRoot().addChild(command);
     }
     private void initConfig() {
@@ -66,16 +66,24 @@ public class LyxithWorld implements ModInitializer {
             configAPI.createModConfig(modId,configName);
         }
         configAPI.loadConfig(modId,configName);
+        configNode = configAPI.getConfigRootNode(modId,configName).getRoot();
         configNode.initNode("helpInfo", false, defaultHelpInfo);
+        configNode.addNode("worldConfigs",false);
         configAPI.saveConfig(modId,configName,configNode);
     }
     public static LyXithConfigAPI getConfigAPI() {
-        return  configAPI;
+        return configAPI;
     }
     public static boolean isWorldExist(Identifier key) {
         RegistryKey<World> worldKey = RegistryKey.of(RegistryKeys.WORLD, key);
 
         ServerWorld world = server.getWorld(worldKey);
         return world != null;
+    }
+    private static void loadAllWorlds() {
+        List worlds = configNode.getNode("worlds").get().getList().get();
+        for (Object world : worlds) {
+            WorldManager.loadWorld(world.toString());
+        }
     }
 }
