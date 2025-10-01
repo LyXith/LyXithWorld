@@ -307,7 +307,7 @@ public class MainCommand {
             .executes(context -> {
                 ServerCommandSource source = context.getSource();
                 ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,source.getName().toLowerCase()));
-                List worldConfig = configNode.getNode("worldConfigs."+nameSpace+source.getName().toLowerCase()).get().getList().get();
+                List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().getList().get();
                 Vec3d pos = new Vec3d(0,0,0);
                 if (worldConfig.size() >= 6 && worldConfig.get(3) instanceof Double && worldConfig.get(4) instanceof Double && worldConfig.get(5) instanceof Double) {
                     pos = new Vec3d(Double.parseDouble(worldConfig.get(3).toString()),
@@ -335,6 +335,8 @@ public class MainCommand {
                 worldConfig.set(3,pos.x);
                 worldConfig.set(4,pos.y);
                 worldConfig.set(5,pos.z);
+                configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().set(worldConfig);
+                configAPI.saveConfig(modId,configName,configNode);
                 source.sendFeedback(()->Text.literal("Your home is set to "+pos.x+" "+pos.y+" "+pos.z),false);
                 return 1;
             }).build();
