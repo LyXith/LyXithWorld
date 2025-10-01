@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.lyxith.lyxithworld.command.MainCommand.*;
 
@@ -51,11 +52,21 @@ public class LyxithWorld implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher,registryAccess,environment) -> {
             commandRegister(dispatcher,mainCommand);
+            commandRegister(dispatcher,alias1);
+            commandRegister(dispatcher,alias2);
         });
     }
     private void commandRegister(CommandDispatcher<ServerCommandSource> dispatcher, LiteralCommandNode<ServerCommandSource> command) {
         command.addChild(createWorld);
-        command.addChild(load);
+        command.addChild(loadWorld);
+        command.addChild(unloadWorld);
+        command.addChild(delWorld);
+        command.addChild(worldGamerule);
+        command.addChild(worldHome);
+        command.addChild(worldSetHome);
+        worldGamerule.addChild(wgList);
+        worldGamerule.addChild(wgQuery);
+        worldGamerule.addChild(wgSet);
         dispatcher.getRoot().addChild(command);
     }
     private void initConfig() {
@@ -69,6 +80,8 @@ public class LyxithWorld implements ModInitializer {
         configNode = configAPI.getConfigRootNode(modId,configName).getRoot();
         configNode.initNode("helpInfo", false, defaultHelpInfo);
         configNode.addNode("worldConfigs",false);
+        List worlds = configNode.getNode("worlds").get().getList().get();
+        configNode.initNode("worlds",false,worlds);
         configAPI.saveConfig(modId,configName,configNode);
     }
     public static LyXithConfigAPI getConfigAPI() {
@@ -81,9 +94,26 @@ public class LyxithWorld implements ModInitializer {
         return world != null;
     }
     private static void loadAllWorlds() {
-        List worlds = configNode.getNode("worlds").get().getList().get();
-        for (Object world : worlds) {
-            WorldManager.loadWorld(world.toString());
+        if (server == null) {
+            LOGGER.error("服务器未启动，无法加载世界");
+            return;
+        }
+
+        try {
+            // 安全地获取世界列表
+            Optional<LyXithConfigNodeImpl> worldsNode = configNode.getNode("worlds");
+            if (worldsNode.isPresent()) {
+                List<?> worlds = worldsNode.get().getList().orElse(new ArrayList<>());
+                for (Object world : worlds) {
+                    if (world != null) {
+                        WorldManager.loadWorld(Identifier.of(world.toString()));
+                    }
+                }
+            } else {
+                LOGGER.warn("配置中未找到世界列表");
+            }
+        } catch (Exception e) {
+            LOGGER.error("加载世界时出错", e);
         }
     }
 }

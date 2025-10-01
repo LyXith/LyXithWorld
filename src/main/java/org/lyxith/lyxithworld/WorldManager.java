@@ -1,5 +1,7 @@
 package org.lyxith.lyxithworld;
 
+import net.minecraft.block.Blocks;
+import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
@@ -11,6 +13,7 @@ import net.minecraft.world.dimension.DimensionTypes;
 import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.FlatChunkGenerator;
 import net.minecraft.world.gen.chunk.FlatChunkGeneratorConfig;
+import net.minecraft.world.gen.chunk.FlatChunkGeneratorLayer;
 import org.lyxith.lyxithconfig.api.LyXithConfigNode;
 import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
@@ -26,7 +29,7 @@ import static org.lyxith.lyxithworld.LyxithWorld.*;
 public class WorldManager {
     private static RuntimeWorldHandle worldHandle;
 
-    public static void createWorld(String dimensionType, String generatorType, boolean shouldTickTime, String ownerName) {
+    public static void createWorld(String dimensionType, String generatorType, boolean shouldTickTime, String worldName) {
         try {
             LOGGER.info("=== 开始创建世界 ===");
 
@@ -36,7 +39,7 @@ public class WorldManager {
             }
 
             // 创建世界标识符
-            Identifier worldId = Identifier.of("lyxithworld", ownerName.toLowerCase());
+            Identifier worldId = Identifier.of("lyxithworld", worldName.toLowerCase());
             LOGGER.info("世界标识符: {}", worldId);
 
             // 创建世界配置
@@ -93,6 +96,19 @@ public class WorldManager {
 
             case "flat" -> {
                 FlatChunkGeneratorConfig flat = new FlatChunkGeneratorConfig(Optional.empty(), plainsBiome, List.of());
+
+                FlatChunkGeneratorLayer[] layers = {
+                        new FlatChunkGeneratorLayer(1, Blocks.GRASS_BLOCK),
+                        new FlatChunkGeneratorLayer(5, Blocks.DIRT),
+                        new FlatChunkGeneratorLayer(2, Blocks.BEDROCK)
+                };
+
+                for (int i = layers.length - 1; i >= 0; --i) {
+                    flat.getLayers().add(layers[i]);
+                }
+
+                flat.updateLayerBlocks();
+
                 yield new FlatChunkGenerator(flat);
             }
             case "default", "normal" ->
@@ -104,18 +120,42 @@ public class WorldManager {
             }
         };
     }
-    public static void loadWorld(String owner) {
-        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+owner).get();
+    public static void loadWorld(Identifier worldId) {
+        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
         String dimensionType = worldNode.getList().get().get(0).toString();
         String generatorType = worldNode.getList().get().get(1).toString();
         boolean shouldTickTime = Boolean.parseBoolean(worldNode.getList().get().get(2).toString());
-        Identifier worldId = Identifier.of("lyxithworld", owner.toLowerCase());
         RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
         Fantasy fantasy = Fantasy.get(server);
         fantasy.getOrOpenPersistentWorld(worldId, config);
     }
-    public static void unloadWorld(ServerWorld serverWorld) {
+    public static void unloadWorld(Identifier worldId) {
+        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
+        String dimensionType = worldNode.getList().get().get(0).toString();
+        String generatorType = worldNode.getList().get().get(1).toString();
+        boolean shouldTickTime = Boolean.parseBoolean(worldNode.getList().get().get(2).toString());
+        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
         Fantasy fantasy = Fantasy.get(server);
-        fantasy.tickUnloadWorld(serverWorld);
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(worldId, config);
+        worldHandle.unload();
+    }
+    public static void delWorld(Identifier worldId) {
+        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
+        String dimensionType = worldNode.getList().get().get(0).toString();
+        String generatorType = worldNode.getList().get().get(1).toString();
+        boolean shouldTickTime = Boolean.parseBoolean(worldNode.getList().get().get(2).toString());
+        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
+        Fantasy fantasy = Fantasy.get(server);
+        RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(worldId, config);
+        worldHandle.delete();
+    }
+    public static ServerWorld getWorld(Identifier worldId) {
+        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
+        String dimensionType = worldNode.getList().get().get(0).toString();
+        String generatorType = worldNode.getList().get().get(1).toString();
+        boolean shouldTickTime = Boolean.parseBoolean(worldNode.getList().get().get(2).toString());
+        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
+        Fantasy fantasy = Fantasy.get(server);
+        return fantasy.getOrOpenPersistentWorld(worldId, config).asWorld();
     }
 }
