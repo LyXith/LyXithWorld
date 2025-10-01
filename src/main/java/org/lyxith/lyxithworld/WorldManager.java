@@ -3,6 +3,7 @@ package org.lyxith.lyxithworld;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.dimension.DimensionType;
@@ -112,5 +113,9 @@ public class WorldManager {
         RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
         Fantasy fantasy = Fantasy.get(server);
         fantasy.getOrOpenPersistentWorld(worldId, config);
+    }
+    public static void unloadWorld(ServerWorld serverWorld) {
+        Fantasy fantasy = Fantasy.get(server);
+        fantasy.tickUnloadWorld(serverWorld);
     }
 }
