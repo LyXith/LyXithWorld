@@ -23,25 +23,65 @@ import java.util.List;
 import static org.lyxith.lyxithworld.LyxithWorld.*;
 
 public class MainCommand {
-     static LyXithConfigAPI configAPI = getConfigAPI();
-     public static LiteralCommandNode<ServerCommandSource> mainCommand = CommandManager.literal("lyxithworld")
-            .executes(context -> {
-                configAPI.loadConfig(modId,configName);
-                context.getSource().sendFeedback(()->Text.literal(configNode.getNode("helpInfo").get().getString().get()), false);
-                return 1;
-            }).build();
-    public static LiteralCommandNode<ServerCommandSource> alias1 = CommandManager.literal("lw")
-            .executes(context -> {
-                configAPI.loadConfig(modId,configName);
-                context.getSource().sendFeedback(()->Text.literal(configNode.getNode("helpInfo").get().getString().get()), false);
-                return 1;
-            }).build();
-    public static LiteralCommandNode<ServerCommandSource> alias2 = CommandManager.literal("p")
-            .executes(context -> {
-                configAPI.loadConfig(modId,configName);
-                context.getSource().sendFeedback(()->Text.literal(configNode.getNode("helpInfo").get().getString().get()), false);
-                return 1;
-            }).build();
+    static LyXithConfigAPI configAPI = getConfigAPI();
+    private static LiteralCommandNode<ServerCommandSource> mainCmdCreator(String cmdName) {
+         return CommandManager.literal(cmdName)
+                 .executes(context -> {
+                     configAPI.loadConfig(modId,configName);
+                     context.getSource().sendFeedback(()->Text.literal(configNode.getNode("helpInfo").get().getString().get()), false);
+                     return 1;
+                 }).build();
+    }
+    private static LiteralCommandNode<ServerCommandSource> homeCmdCreator(String cmdName) {
+        return CommandManager.literal(cmdName)
+                .executes(context -> {
+                    ServerCommandSource source = context.getSource();
+                    ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,source.getName().toLowerCase()));
+                    List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().getList().get();
+                    Vec3d pos = new Vec3d(0,0,0);
+                    if (worldConfig.size() >= 6 && worldConfig.get(3) instanceof Double && worldConfig.get(4) instanceof Double && worldConfig.get(5) instanceof Double) {
+                        pos = new Vec3d(Double.parseDouble(worldConfig.get(3).toString()),
+                                Double.parseDouble(worldConfig.get(4).toString()),
+                                Double.parseDouble(worldConfig.get(5).toString()));
+                    } else {
+                        source.sendFeedback(()->Text.literal("§cYour world wasn't set home."),false);
+                    }
+                    if (source.getEntity() != null) {
+                        source.sendFeedback(()->Text.literal("§6Teleporting to home"),false);
+                        source.getEntity().teleportTo(new TeleportTarget(world, pos, Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP));
+                    }
+                    return 1;
+                }).build();
+    }
+    private static LiteralCommandNode<ServerCommandSource> visitCmdCreator(String cmdName) {
+        return CommandManager.literal(cmdName)
+                .then(CommandManager.argument("worldId", StringArgumentType.string())
+                        .executes(context -> {
+                            String worldId = StringArgumentType.getString(context, "worldId");
+                            ServerCommandSource source = context.getSource();
+                            ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,worldId.toLowerCase()));
+                            List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+worldId.toLowerCase()).get().getList().get();
+                            Vec3d pos = new Vec3d(0,0,0);
+                            if (worldConfig.size() >= 6 && worldConfig.get(3) instanceof Double && worldConfig.get(4) instanceof Double && worldConfig.get(5) instanceof Double) {
+                                pos = new Vec3d(Double.parseDouble(worldConfig.get(3).toString()),
+                                        Double.parseDouble(worldConfig.get(4).toString()),
+                                        Double.parseDouble(worldConfig.get(5).toString()));
+                            } else {
+                                source.sendFeedback(()->Text.literal("§cThis world wasn't set home."),false);
+                            }
+                            if (source.getEntity() != null) {
+                                source.sendFeedback(()->Text.literal("§6Teleporting to home"),false);
+                                source.getEntity().teleportTo(new TeleportTarget(world, pos, Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP));
+                            }
+                            return 1;})).build();
+    }
+    public static LiteralCommandNode<ServerCommandSource> mainCommand = mainCmdCreator("lyxithworld");
+    public static LiteralCommandNode<ServerCommandSource> mainAlias1 = mainCmdCreator("lw");
+    public static LiteralCommandNode<ServerCommandSource> mainAlias2 = mainCmdCreator("p");
+    public static LiteralCommandNode<ServerCommandSource> worldHome = homeCmdCreator("home");
+    public static LiteralCommandNode<ServerCommandSource> homeAlias = homeCmdCreator("h");
+    public static LiteralCommandNode<ServerCommandSource> worldVisit = visitCmdCreator("visit");
+    public static LiteralCommandNode<ServerCommandSource> visitAlias = visitCmdCreator("v");
     public static LiteralCommandNode<ServerCommandSource> createWorld = CommandManager.literal("create")
             .then(CommandManager.argument("DimensionType", StringArgumentType.string())
                     .then(CommandManager.argument("Generator", StringArgumentType.string())
@@ -303,25 +343,6 @@ public class MainCommand {
         }
         return false;
     }
-    public static LiteralCommandNode<ServerCommandSource> worldHome = CommandManager.literal("home")
-            .executes(context -> {
-                ServerCommandSource source = context.getSource();
-                ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,source.getName().toLowerCase()));
-                List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().getList().get();
-                Vec3d pos = new Vec3d(0,0,0);
-                if (worldConfig.size() >= 6 && worldConfig.get(3) instanceof Double && worldConfig.get(4) instanceof Double && worldConfig.get(5) instanceof Double) {
-                    pos = new Vec3d(Double.parseDouble(worldConfig.get(3).toString()),
-                            Double.parseDouble(worldConfig.get(4).toString()),
-                            Double.parseDouble(worldConfig.get(5).toString()));
-                } else {
-                    source.sendFeedback(()->Text.literal("§cSome errors happened "),false);
-                }
-                if (source.getEntity() != null) {
-                    source.sendFeedback(()->Text.literal("§6Teleporting to home"),false);
-                    source.getEntity().teleportTo(new TeleportTarget(world, pos, Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP));
-                }
-                return 1;
-            }).build();
     public static LiteralCommandNode<ServerCommandSource> worldSetHome = CommandManager.literal("sethome")
             .executes(context -> {
                 ServerCommandSource source = context.getSource();
@@ -332,6 +353,9 @@ public class MainCommand {
                 }
                 List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().getList().get();
                 Vec3d pos = source.getPosition();
+                while (worldConfig.size() <= 6) {
+                    worldConfig.add(0); // 填充默认值
+                }
                 worldConfig.set(3,pos.x);
                 worldConfig.set(4,pos.y);
                 worldConfig.set(5,pos.z);

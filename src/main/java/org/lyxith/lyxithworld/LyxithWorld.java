@@ -52,8 +52,8 @@ public class LyxithWorld implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher,registryAccess,environment) -> {
             commandRegister(dispatcher,mainCommand);
-            commandRegister(dispatcher,alias1);
-            commandRegister(dispatcher,alias2);
+            commandRegister(dispatcher,mainAlias1);
+            commandRegister(dispatcher,mainAlias2);
         });
     }
     private void commandRegister(CommandDispatcher<ServerCommandSource> dispatcher, LiteralCommandNode<ServerCommandSource> command) {
@@ -63,6 +63,9 @@ public class LyxithWorld implements ModInitializer {
         command.addChild(delWorld);
         command.addChild(worldGamerule);
         command.addChild(worldHome);
+        command.addChild(homeAlias);
+        command.addChild(worldVisit);
+        command.addChild(visitAlias);
         command.addChild(worldSetHome);
         worldGamerule.addChild(wgList);
         worldGamerule.addChild(wgQuery);

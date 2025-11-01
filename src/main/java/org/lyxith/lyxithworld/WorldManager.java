@@ -1,7 +1,6 @@
 package org.lyxith.lyxithworld;
 
 import net.minecraft.block.Blocks;
-import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
