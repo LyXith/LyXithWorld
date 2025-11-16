@@ -16,10 +16,8 @@ import net.minecraft.world.GameRules;
 import net.minecraft.world.TeleportTarget;
 import org.lyxith.lyxithconfig.api.LyXithConfigAPI;
 import org.lyxith.lyxithconfig.api.LyXithConfigNode;
-import org.lyxith.lyxithconfig.api.LyXithConfigNodeImpl;
 import org.lyxith.lyxithworld.WorldManager;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.lyxith.lyxithworld.LyxithWorld.*;
@@ -65,7 +63,7 @@ public class MainCommand {
                             String worldId = StringArgumentType.getString(context, "worldId");
                             ServerCommandSource source = context.getSource();
                             ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,worldId.toLowerCase()));
-                            LyXithConfigNode worldConfigNode = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get();
+                            LyXithConfigNode worldConfigNode = configNode.getNode("worldConfigs."+nameSpace+":"+worldId.toLowerCase()).get();
                             Vec3d pos = new Vec3d(0,0,0);
                             if (worldConfigNode.getNode("homePos").isPresent()) {
                                 List<Double> posList = worldConfigNode.getNode("homePos").get().getList().get();
