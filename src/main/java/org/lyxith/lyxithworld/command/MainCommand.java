@@ -15,6 +15,8 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.TeleportTarget;
 import org.lyxith.lyxithconfig.api.LyXithConfigAPI;
+import org.lyxith.lyxithconfig.api.LyXithConfigNode;
+import org.lyxith.lyxithconfig.api.LyXithConfigNodeImpl;
 import org.lyxith.lyxithworld.WorldManager;
 
 import java.util.ArrayList;
@@ -37,12 +39,15 @@ public class MainCommand {
                 .executes(context -> {
                     ServerCommandSource source = context.getSource();
                     ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,source.getName().toLowerCase()));
-                    List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().getList().get();
+                    LyXithConfigNode worldConfigNode = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get();
                     Vec3d pos = new Vec3d(0,0,0);
-                    if (worldConfig.size() >= 6 && worldConfig.get(3) instanceof Double && worldConfig.get(4) instanceof Double && worldConfig.get(5) instanceof Double) {
-                        pos = new Vec3d(Double.parseDouble(worldConfig.get(3).toString()),
-                                Double.parseDouble(worldConfig.get(4).toString()),
-                                Double.parseDouble(worldConfig.get(5).toString()));
+                    if (worldConfigNode.getNode("homePos").isPresent()) {
+                        List<Double> posList = worldConfigNode.getNode("homePos").get().getList().get();
+                        pos = new Vec3d(
+                                posList.get(0),
+                                posList.get(1),
+                                posList.get(2)
+                        );
                     } else {
                         source.sendFeedback(()->Text.literal("§cYour world wasn't set home."),false);
                     }
@@ -60,12 +65,15 @@ public class MainCommand {
                             String worldId = StringArgumentType.getString(context, "worldId");
                             ServerCommandSource source = context.getSource();
                             ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,worldId.toLowerCase()));
-                            List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+worldId.toLowerCase()).get().getList().get();
+                            LyXithConfigNode worldConfigNode = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get();
                             Vec3d pos = new Vec3d(0,0,0);
-                            if (worldConfig.size() >= 6 && worldConfig.get(3) instanceof Double && worldConfig.get(4) instanceof Double && worldConfig.get(5) instanceof Double) {
-                                pos = new Vec3d(Double.parseDouble(worldConfig.get(3).toString()),
-                                        Double.parseDouble(worldConfig.get(4).toString()),
-                                        Double.parseDouble(worldConfig.get(5).toString()));
+                            if (worldConfigNode.getNode("homePos").isPresent()) {
+                                List<Double> posList = worldConfigNode.getNode("homePos").get().getList().get();
+                                pos = new Vec3d(
+                                        posList.get(0),
+                                        posList.get(1),
+                                        posList.get(2)
+                                );
                             } else {
                                 source.sendFeedback(()->Text.literal("§cThis world wasn't set home."),false);
                             }
@@ -213,12 +221,8 @@ public class MainCommand {
         String finalWorldName = worldName;
         context.getSource().sendFeedback(() -> Text.literal("World created"+" dimensionType:"+dimensionType+" generator:"+generator+" shouldTickTime:"+shouldTickTime+" worldName:"+ finalWorldName +"."), false);
         WorldManager.createWorld(dimensionType,generator,shouldTickTime,worldName);
-        List<String> worldConfig = new ArrayList<>();
+        WorldManager.createWorldConfigNode(worldId,context.getSource().getName(),dimensionType,generator,shouldTickTime);
         List<String> worlds = configNode.getNode("worlds").get().getList().get();
-        worldConfig.add(dimensionType);
-        worldConfig.add(generator);
-        worldConfig.add(String.valueOf(shouldTickTime));
-        configNode.initNode("worldConfigs."+worldId,false,worldConfig);
         worlds.add(worldId.toString());
         configNode.initNode("worlds",false,worlds);
         configAPI.saveConfig(modId,configName,configNode);
@@ -351,15 +355,15 @@ public class MainCommand {
                     source.sendFeedback(()->Text.literal("Please sethome in your world"),false);
                     return 0;
                 }
-                List worldConfig = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().getList().get();
+                List<Double> homePos = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()+".homePos").get().getList().get();
                 Vec3d pos = source.getPosition();
-                while (worldConfig.size() <= 6) {
-                    worldConfig.add(0); // 填充默认值
+                while (homePos.size() < 3) {
+                    homePos.add(0d); // 填充默认值
                 }
-                worldConfig.set(3,pos.x);
-                worldConfig.set(4,pos.y);
-                worldConfig.set(5,pos.z);
-                configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get().set(worldConfig);
+                homePos.set(0,pos.x);
+                homePos.set(1,pos.y);
+                homePos.set(2,pos.z);
+                configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()+".homePos").get().set(homePos);
                 configAPI.saveConfig(modId,configName,configNode);
                 source.sendFeedback(()->Text.literal("Your home is set to "+pos.x+" "+pos.y+" "+pos.z),false);
                 return 1;

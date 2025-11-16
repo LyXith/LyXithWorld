@@ -19,6 +19,7 @@ import org.lyxith.lyxithconfig.api.LyXithConfigNodeImpl;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -83,6 +84,7 @@ public class LyxithWorld implements ModInitializer {
         configNode = configAPI.getConfigRootNode(modId,configName).getRoot();
         configNode.initNode("helpInfo", false, defaultHelpInfo);
         configNode.addNode("worldConfigs",false);
+        if (!configNode.getNode("worlds").isPresent()) configNode.initNode("worlds",false,new ArrayList<>());
         List worlds = configNode.getNode("worlds").get().getList().get();
         configNode.initNode("worlds",false,worlds);
         configAPI.saveConfig(modId,configName,configNode);
