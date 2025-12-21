@@ -68,6 +68,8 @@ public class LyxithWorld implements ModInitializer {
         command.addChild(worldVisit);
         command.addChild(visitAlias);
         command.addChild(worldSetHome);
+        command.addChild(autoCreate);
+        command.addChild(autoAlias);
         worldGamerule.addChild(wgList);
         worldGamerule.addChild(wgQuery);
         worldGamerule.addChild(wgSet);

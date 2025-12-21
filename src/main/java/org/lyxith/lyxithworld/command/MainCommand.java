@@ -1,8 +1,10 @@
 package org.lyxith.lyxithworld.command;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.server.MinecraftServer;
@@ -36,8 +38,9 @@ public class MainCommand {
         return CommandManager.literal(cmdName)
                 .executes(context -> {
                     ServerCommandSource source = context.getSource();
-                    ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,source.getName().toLowerCase()));
-                    LyXithConfigNode worldConfigNode = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()).get();
+                    ServerWorld world = WorldManager.getWorldByOwner(source.getPlayer(),1);
+                    Identifier worldId = WorldManager.getWorldIdByOwner(source.getPlayer(), 1);
+                    LyXithConfigNode worldConfigNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
                     Vec3d pos = new Vec3d(0,0,0);
                     if (worldConfigNode.getNode("homePos").isPresent()) {
                         List<Double> posList = worldConfigNode.getNode("homePos").get().getList().get();
@@ -54,11 +57,40 @@ public class MainCommand {
                         source.getEntity().teleportTo(new TeleportTarget(world, pos, Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP));
                     }
                     return 1;
-                }).build();
+                })
+                .then(CommandManager.argument("index", IntegerArgumentType.integer(1))
+                        .executes(context -> {
+                            int index = IntegerArgumentType.getInteger(context,"index");
+                            ServerCommandSource source = context.getSource();
+                            ServerWorld world = WorldManager.getWorldByOwner(source.getPlayer(),index);
+                            Identifier worldId = WorldManager.getWorldIdByOwner(source.getPlayer(),index);
+                            if (worldId == null) {
+                                source.sendFeedback(()->Text.literal("§cYou just have "+ (index - 1) + " worlds"),false);
+                                return 0;
+                            }
+                            LyXithConfigNode worldConfigNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
+                            Vec3d pos = new Vec3d(0,0,0);
+                            if (worldConfigNode.getNode("homePos").isPresent()) {
+                                List<Double> posList = worldConfigNode.getNode("homePos").get().getList().get();
+                                pos = new Vec3d(
+                                        posList.get(0),
+                                        posList.get(1),
+                                        posList.get(2)
+                                );
+                            } else {
+                                source.sendFeedback(()->Text.literal("§cYour world wasn't set home."),false);
+                            }
+                            if (source.getEntity() != null) {
+                                source.sendFeedback(()->Text.literal("§6Teleporting to home"),false);
+                                source.getEntity().teleportTo(new TeleportTarget(world, pos, Vec3d.ZERO, 0, 0, TeleportTarget.NO_OP));
+                            }
+                            return 1;
+                        })).build();
     }
     private static LiteralCommandNode<ServerCommandSource> visitCmdCreator(String cmdName) {
         return CommandManager.literal(cmdName)
                 .then(CommandManager.argument("worldId", StringArgumentType.string())
+                        .suggests(WorldSuggestionProvider::getSuggestions)
                         .executes(context -> {
                             String worldId = StringArgumentType.getString(context, "worldId");
                             ServerCommandSource source = context.getSource();
@@ -81,6 +113,13 @@ public class MainCommand {
                             }
                             return 1;})).build();
     }
+    private static LiteralCommandNode<ServerCommandSource> autoCmd(String cmdName) {
+        return CommandManager.literal(cmdName)
+                .executes(context -> createWorld(context,true))
+                .then(CommandManager.argument("worldName", StringArgumentType.string())
+                        .executes(context -> createWorld(context,true)))
+                .build();
+    }
     public static LiteralCommandNode<ServerCommandSource> mainCommand = mainCmdCreator("lyxithworld");
     public static LiteralCommandNode<ServerCommandSource> mainAlias1 = mainCmdCreator("lw");
     public static LiteralCommandNode<ServerCommandSource> mainAlias2 = mainCmdCreator("p");
@@ -88,13 +127,15 @@ public class MainCommand {
     public static LiteralCommandNode<ServerCommandSource> homeAlias = homeCmdCreator("h");
     public static LiteralCommandNode<ServerCommandSource> worldVisit = visitCmdCreator("visit");
     public static LiteralCommandNode<ServerCommandSource> visitAlias = visitCmdCreator("v");
+    public static LiteralCommandNode<ServerCommandSource> autoCreate = autoCmd("auto");
+    public static LiteralCommandNode<ServerCommandSource> autoAlias = autoCmd("a");
     public static LiteralCommandNode<ServerCommandSource> createWorld = CommandManager.literal("create")
             .then(CommandManager.argument("DimensionType", StringArgumentType.string())
                     .then(CommandManager.argument("Generator", StringArgumentType.string())
                             .then(CommandManager.argument("ShouldTickTime", BoolArgumentType.bool())
-                                    .executes(MainCommand::createWorld)
+                                    .executes(context -> createWorld(context,false))
                                     .then(CommandManager.argument("worldName", StringArgumentType.string())
-                                            .executes(MainCommand::createWorld)))))
+                                            .executes(context -> createWorld(context,false))))))
             .build();
     public static LiteralCommandNode<ServerCommandSource> loadWorld = CommandManager.literal("load")
             .executes(context -> {
@@ -150,6 +191,7 @@ public class MainCommand {
                 return 1;
             })
             .then(CommandManager.argument("worldId", IdentifierArgumentType.identifier())
+                    .suggests(WorldSuggestionProvider::getSuggestions)
                     .executes(context -> {
                         try {
                             WorldManager.unloadWorld(IdentifierArgumentType.getIdentifier(context,"worldId"));
@@ -184,6 +226,7 @@ public class MainCommand {
                 return 1;
             })
             .then(CommandManager.argument("worldId", IdentifierArgumentType.identifier())
+                    .suggests(WorldSuggestionProvider::getSuggestions)
                     .executes(context -> {
                         try {
                             WorldManager.delWorld(IdentifierArgumentType.getIdentifier(context,"worldId"));
@@ -200,10 +243,19 @@ public class MainCommand {
                         configAPI.saveConfig(modId,configName,configNode);
                         return 1;
                     })).build();
-    private static int createWorld(CommandContext<ServerCommandSource> context) {
-        String dimensionType = StringArgumentType.getString(context, "DimensionType");
-        String generator = StringArgumentType.getString(context, "Generator");
-        boolean shouldTickTime = BoolArgumentType.getBool(context, "ShouldTickTime");
+    private static int createWorld(CommandContext<ServerCommandSource> context, boolean auto) {
+        String dimensionType;
+        String generator;
+        boolean shouldTickTime;
+        if (auto) {
+            dimensionType = "OVERWORLD";
+            generator = "flat";
+            shouldTickTime = true;
+        } else {
+            dimensionType = StringArgumentType.getString(context, "DimensionType");
+            generator = StringArgumentType.getString(context, "Generator");
+            shouldTickTime = BoolArgumentType.getBool(context, "ShouldTickTime");
+        }
         String worldName;
         try {
             worldName = StringArgumentType.getString(context, "worldName");
@@ -217,7 +269,10 @@ public class MainCommand {
             return 0;
         }
         String finalWorldName = worldName;
-        context.getSource().sendFeedback(() -> Text.literal("World created"+" dimensionType:"+dimensionType+" generator:"+generator+" shouldTickTime:"+shouldTickTime+" worldName:"+ finalWorldName +"."), false);
+        String finalDimensionType = dimensionType;
+        String finalGenerator = generator;
+        boolean finalShouldTickTime = shouldTickTime;
+        context.getSource().sendFeedback(() -> Text.literal("World created"+" dimensionType:"+ finalDimensionType +" generator:"+ finalGenerator +" shouldTickTime:"+ finalShouldTickTime +" worldName:"+ finalWorldName +"."), false);
         WorldManager.createWorld(dimensionType,generator,shouldTickTime,worldName);
         WorldManager.createWorldConfigNode(worldId,context.getSource().getName(),dimensionType,generator,shouldTickTime);
         List<String> worlds = configNode.getNode("worlds").get().getList().get();
@@ -348,12 +403,13 @@ public class MainCommand {
     public static LiteralCommandNode<ServerCommandSource> worldSetHome = CommandManager.literal("sethome")
             .executes(context -> {
                 ServerCommandSource source = context.getSource();
-                ServerWorld world = WorldManager.getWorld(Identifier.of(nameSpace,source.getName().toLowerCase()));
-                if (!(source.getWorld() == world)) {
+                ServerWorld world = source.getWorld();
+                String worldId = world.getRegistryKey().getValue().toString();
+                if (!configNode.getNode("worldConfigs."+worldId).isPresent() || !configNode.getNode("worldConfigs."+worldId+".owner").get().getString().get().equals(source.getName())) {
                     source.sendFeedback(()->Text.literal("Please sethome in your world"),false);
                     return 0;
                 }
-                List<Double> homePos = configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()+".homePos").get().getList().get();
+                List<Double> homePos = configNode.getNode("worldConfigs."+worldId+".homePos").get().getList().get();
                 Vec3d pos = source.getPosition();
                 while (homePos.size() < 3) {
                     homePos.add(0d); // 填充默认值
@@ -361,7 +417,7 @@ public class MainCommand {
                 homePos.set(0,pos.x);
                 homePos.set(1,pos.y);
                 homePos.set(2,pos.z);
-                configNode.getNode("worldConfigs."+nameSpace+":"+source.getName().toLowerCase()+".homePos").get().set(homePos);
+                configNode.getNode("worldConfigs."+worldId+".homePos").get().set(homePos);
                 configAPI.saveConfig(modId,configName,configNode);
                 source.sendFeedback(()->Text.literal("Your home is set to "+pos.x+" "+pos.y+" "+pos.z),false);
                 return 1;

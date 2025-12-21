@@ -4,9 +4,9 @@ import net.minecraft.block.Blocks;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.dimension.DimensionTypes;
@@ -14,10 +14,7 @@ import net.minecraft.world.gen.chunk.ChunkGenerator;
 import net.minecraft.world.gen.chunk.FlatChunkGenerator;
 import net.minecraft.world.gen.chunk.FlatChunkGeneratorConfig;
 import net.minecraft.world.gen.chunk.FlatChunkGeneratorLayer;
-import org.lyxith.lyxithconfig.LyxithConfig;
-import org.lyxith.lyxithconfig.api.LyXithConfigAPI;
 import org.lyxith.lyxithconfig.api.LyXithConfigNode;
-import org.lyxith.lyxithconfig.api.LyXithConfigNodeImpl;
 import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
 import xyz.nucleoid.fantasy.RuntimeWorldHandle;
@@ -175,5 +172,29 @@ public class WorldManager {
         worldConfigNode.initNode("homePos",false, homePos);
         worldConfigNode.initNode("owner",false,owner);
         configAPI.saveConfig(modId,configName,configNode);
+    }
+    public static ServerWorld getWorldByOwner(ServerPlayerEntity player, int index) {
+        if (player == null || index < 1) {
+            return null;
+        }
+        return getWorld(getWorldIdByOwner(player,index));
+    }
+    public static Identifier getWorldIdByOwner(ServerPlayerEntity player, int index) {
+        if (player == null || index < 1) {
+            return null;
+        }
+        String playerId = player.getNameForScoreboard();
+        List<String> worldList = configNode.getNode("worlds").get().getList().get();
+        for (String worldId : worldList) {
+            if (configNode.getNode("worldConfigs."+worldId).isPresent()) {
+                if (configNode.getNode("worldConfigs."+worldId).get().getNode("owner").get().getString().get().equals(playerId)) {
+                    if (index == 1) {
+                        return Identifier.of(worldId);
+                    }
+                    index--;
+                }
+            }
+        }
+        return null;
     }
 }
