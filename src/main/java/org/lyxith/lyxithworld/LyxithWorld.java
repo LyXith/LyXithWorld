@@ -31,6 +31,7 @@ public class LyxithWorld implements ModInitializer {
     public static final String modId = "LyXithWorld";
     public static final String nameSpace = "lyxithworld";
     public static final String configName = "World";
+    public static final String gameruleConfig = "worldGamerules";
     public static LyXithConfigAPI configAPI;
     public static MinecraftServer server;
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -81,6 +82,9 @@ public class LyxithWorld implements ModInitializer {
         }
         if (!configAPI.modConfigExist(modId,configName)) {
             configAPI.createModConfig(modId,configName);
+        }
+        if (!configAPI.modConfigExist(modId,gameruleConfig)) {
+            configAPI.createModConfig(modId,gameruleConfig);
         }
         configAPI.loadConfig(modId,configName);
         configNode = configAPI.getConfigRootNode(modId,configName).getRoot();

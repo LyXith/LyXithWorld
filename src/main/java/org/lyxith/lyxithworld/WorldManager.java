@@ -6,7 +6,9 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.dimension.DimensionTypes;
@@ -15,6 +17,7 @@ import net.minecraft.world.gen.chunk.FlatChunkGenerator;
 import net.minecraft.world.gen.chunk.FlatChunkGeneratorConfig;
 import net.minecraft.world.gen.chunk.FlatChunkGeneratorLayer;
 import org.lyxith.lyxithconfig.api.LyXithConfigNode;
+import org.lyxith.lyxithconfig.api.LyXithConfigNodeImpl;
 import xyz.nucleoid.fantasy.Fantasy;
 import xyz.nucleoid.fantasy.RuntimeWorldConfig;
 import xyz.nucleoid.fantasy.RuntimeWorldHandle;
@@ -123,41 +126,32 @@ public class WorldManager {
             }
         };
     }
-    public static void loadWorld(Identifier worldId) {
+    public static RuntimeWorldConfig getWorldConfig(Identifier worldId) {
         LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
         String dimensionType = worldNode.getNode("dimensionType").get().getString().get();
         String generatorType = worldNode.getNode("generator").get().getString().get();
         boolean shouldTickTime = worldNode.getNode("shouldTickTime").get().getBoolean().get();
-        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
+        return createWorldConfig(dimensionType, generatorType, shouldTickTime);
+    }
+    public static void loadWorld(Identifier worldId) {
+        RuntimeWorldConfig config = getWorldConfig(worldId);
         Fantasy fantasy = Fantasy.get(server);
         fantasy.getOrOpenPersistentWorld(worldId, config);
     }
     public static void unloadWorld(Identifier worldId) {
-        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
-        String dimensionType = worldNode.getNode("dimensionType").get().getString().get();
-        String generatorType = worldNode.getNode("generator").get().getString().get();
-        boolean shouldTickTime = worldNode.getNode("shouldTickTime").get().getBoolean().get();
-        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
+        RuntimeWorldConfig config = getWorldConfig(worldId);
         Fantasy fantasy = Fantasy.get(server);
         RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(worldId, config);
         worldHandle.unload();
     }
     public static void delWorld(Identifier worldId) {
-        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
-        String dimensionType = worldNode.getNode("dimensionType").get().getString().get();
-        String generatorType = worldNode.getNode("generator").get().getString().get();
-        boolean shouldTickTime = worldNode.getNode("shouldTickTime").get().getBoolean().get();
-        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
+        RuntimeWorldConfig config = getWorldConfig(worldId);
         Fantasy fantasy = Fantasy.get(server);
         RuntimeWorldHandle worldHandle = fantasy.getOrOpenPersistentWorld(worldId, config);
         worldHandle.delete();
     }
     public static ServerWorld getWorld(Identifier worldId) {
-        LyXithConfigNode worldNode = configNode.getNode("worldConfigs."+worldId.toString()).get();
-        String dimensionType = worldNode.getNode("dimensionType").get().getString().get();
-        String generatorType = worldNode.getNode("generator").get().getString().get();
-        boolean shouldTickTime = worldNode.getNode("shouldTickTime").get().getBoolean().get();
-        RuntimeWorldConfig config = createWorldConfig(dimensionType, generatorType, shouldTickTime);
+        RuntimeWorldConfig config = getWorldConfig(worldId);
         Fantasy fantasy = Fantasy.get(server);
         return fantasy.getOrOpenPersistentWorld(worldId, config).asWorld();
     }
@@ -196,5 +190,8 @@ public class WorldManager {
             }
         }
         return null;
+    }
+
+    public static void loadWorldGamerule(Identifier worldId) {
     }
 }
